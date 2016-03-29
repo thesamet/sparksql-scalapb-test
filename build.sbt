@@ -1,6 +1,7 @@
 import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
 
-scalaVersion := "2.11.7"
+// SparkSQL can work with a Spark built with Scala 2.11 too.
+// scalaVersion := "2.11.7"
 
 PB.protobufSettings
 
