@@ -16,7 +16,6 @@ object PrepareFile {
       )),
     Person().update(
       _.name := "Steven",
-      _.age := 35,
       _.gender := Gender.MALE,
       _.addresses := Seq(
           Address(city = Some("San Francisco"), street=Some("5th Street")),

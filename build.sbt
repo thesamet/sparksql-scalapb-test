@@ -1,4 +1,5 @@
 // SparkSQL can work with a Spark built with Scala 2.11 too.
+
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
