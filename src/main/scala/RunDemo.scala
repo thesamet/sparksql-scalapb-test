@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.rdd.RDD
-import com.trueaccord.scalapb.spark._
+import scalapb.spark._
 
 object RunDemo extends App {
     // Should be placed on all worker machines:
@@ -23,7 +23,7 @@ object RunDemo extends App {
 
     // the above import com.trueaccord.scalapb.spark._ is needed for the following
     // to work:
-    sqlContext.protoToDF(persons).registerTempTable("persons")
+    sqlContext.protoToDataFrame(persons).registerTempTable("persons")
 
     sqlContext.sql("SELECT name, age, size(addresses) FROM persons WHERE age > 30")
       .collect
