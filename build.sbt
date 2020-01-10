@@ -5,7 +5,7 @@ scalaVersion := "2.11.12"
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "2.4.4" % "provided",
   "org.apache.spark" %% "spark-sql" % "2.4.4" % "provided",
-  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.8.1"
+  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.9.0"
 )
 
 // Hadoop contains an old protobuf runtime that is not binary compatible
@@ -15,7 +15,6 @@ assemblyShadeRules in assembly := Seq(
 )
 
 PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value,
-  scalapb.UdtGenerator -> (sourceManaged in Compile).value
+  scalapb.gen() -> (sourceManaged in Compile).value
 )
 

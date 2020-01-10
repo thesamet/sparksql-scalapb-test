@@ -1,53 +1,58 @@
+package myexample
+
 import com.example.protos.demo._
 
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.rdd.RDD
-import scalapb.spark._
+import scalapb.spark.Implicits._
+import scalapb.spark.ProtoSQL
 
-object RunDemo extends App {
-  // Register our UDTs to avoid "<none> is not a term" error:
-  com.example.protos.demo.DemoProtoUdt.register()
+object RunDemo {
 
-  // Should be placed on all worker machines:
-  val inputFile = "/tmp/input.base64.txt"
-  val spark = SparkSession.builder().appName("ScalaPB Demo").getOrCreate()
-  import spark.implicits._
-  val sc = spark.sparkContext
+  def main(Args: Array[String]): Unit = {
+    // Should be placed on all worker machines:
+    val inputFile = "/tmp/input.base64.txt"
 
-  // Converts a base64-encoded line to Person.
-  def parseLine(s: String): Person = Person.parseFrom(
-    org.apache.commons.codec.binary.Base64.decodeBase64(s)
-  )
+    val spark = SparkSession.builder().appName("ScalaPB Demo").getOrCreate()
 
-  val persons: RDD[Person] = sc.textFile(inputFile).map(parseLine)
+    val sc = spark.sparkContext
 
-  // the above import scalapb.spark._ is needed for the following to work:
-  val personsDF: DataFrame = persons.toDataFrame(spark)
+    // Converts a base64-encoded line to Person.
+    def parseLine(s: String): Person = Person.parseFrom(
+      org.apache.commons.codec.binary.Base64.decodeBase64(s)
+    )
 
-  val personsDS1: Dataset[Person] = spark.createDataset(persons.collect())
+    val persons: RDD[Person] = sc.textFile(inputFile).map(parseLine)
 
-  val personsDS2: Dataset[Person] = persons.map(_.toByteArray).toDF.map(r => Person.parseFrom(r.getAs[Array[Byte]]("value")))
+    val personsDF: DataFrame = ProtoSQL.protoToDataFrame(spark, persons)
 
-  personsDS1.show()
+    val personsDS1: Dataset[Person] = personsDF.as[Person]
 
-  personsDS2.show()
+    val personsDS2: Dataset[Person] = spark.createDataset(persons.collect())
 
-  personsDF.createOrReplaceTempView("persons")
+    personsDS1.show()
+
+    personsDS2.show()
+
+    personsDF.createOrReplaceTempView("persons")
 
 
-  spark.sql("SELECT name, age, gender, size(addresses) FROM persons").show()
+    spark.sql("SELECT name, age, gender, size(addresses) FROM persons").show()
 
-  spark.sql("SELECT name, age, gender, size(addresses) FROM persons WHERE age > 30")
-    .collect
-    .foreach(println)
+    spark.sql("SELECT name, age, gender, size(addresses) FROM persons WHERE age > 30")
+      .collect
+      .foreach(println)
 
-  persons.saveAsParquet("/tmp/out.parquet")
+    {
+      import scalapb.spark._
+      persons.saveAsParquet("/tmp/out.parquet")
 
-  ProtoParquet.loadParquet[Person](spark, "/tmp/out.parquet").collect().foreach(println)
+      ProtoParquet.loadParquet[Person](spark, "/tmp/out.parquet").collect().foreach(println)
+    }
+  }
 }

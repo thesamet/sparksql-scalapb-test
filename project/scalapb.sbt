@@ -1,6 +1,3 @@
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.25")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.27")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.9.0"
-
-libraryDependencies += "com.thesamet.scalapb" %% "sparksql-scalapb-gen" % "0.8.1"
-
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.9.6"
