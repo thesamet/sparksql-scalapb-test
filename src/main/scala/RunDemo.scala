@@ -15,25 +15,15 @@ import scalapb.spark.ProtoSQL
 object RunDemo {
 
   def main(Args: Array[String]): Unit = {
-    // Should be placed on all worker machines:
-    val inputFile = "/tmp/input.base64.txt"
-
     val spark = SparkSession.builder().appName("ScalaPB Demo").getOrCreate()
 
     val sc = spark.sparkContext
 
-    // Converts a base64-encoded line to Person.
-    def parseLine(s: String): Person = Person.parseFrom(
-      org.apache.commons.codec.binary.Base64.decodeBase64(s)
-    )
-
-    val persons: RDD[Person] = sc.textFile(inputFile).map(parseLine)
-
-    val personsDF: DataFrame = ProtoSQL.protoToDataFrame(spark, persons)
+    val personsDF: DataFrame = ProtoSQL.createDataFrame(spark, testData)
 
     val personsDS1: Dataset[Person] = personsDF.as[Person]
 
-    val personsDS2: Dataset[Person] = spark.createDataset(persons.collect())
+    val personsDS2: Dataset[Person] = spark.createDataset(testData)
 
     personsDS1.show()
 
@@ -41,18 +31,34 @@ object RunDemo {
 
     personsDF.createOrReplaceTempView("persons")
 
-
     spark.sql("SELECT name, age, gender, size(addresses) FROM persons").show()
 
     spark.sql("SELECT name, age, gender, size(addresses) FROM persons WHERE age > 30")
       .collect
       .foreach(println)
-
-    {
-      import scalapb.spark._
-      persons.saveAsParquet("/tmp/out.parquet")
-
-      ProtoParquet.loadParquet[Person](spark, "/tmp/out.parquet").collect().foreach(println)
-    }
   }
+
+  val testData: Seq[Person] = Seq(
+    Person().update(
+      _.name := "Joe",
+      _.age := 32,
+      _.gender := Gender.MALE),
+    Person().update(
+      _.name := "Mark",
+      _.age := 21,
+      _.gender := Gender.MALE,
+      _.addresses := Seq(
+          Address(city = Some("San Francisco"), street=Some("3rd Street"))
+      )),
+    Person().update(
+      _.name := "Steven",
+      _.gender := Gender.MALE,
+      _.addresses := Seq(
+          Address(city = Some("San Francisco"), street=Some("5th Street")),
+          Address(city = Some("Sunnyvale"), street=Some("Wolfe"))
+      )),
+    Person().update(
+      _.name := "Batya",
+      _.age := 11,
+      _.gender := Gender.FEMALE))
 }
