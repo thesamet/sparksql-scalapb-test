@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
 )
 
 // Hadoop contains an old protobuf runtime that is not binary compatible
-// with 3.0.0.  We shared ours to prevent runtime issues.
+// with 3.0.0.  We shaded ours to prevent runtime issues.
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
   ShadeRule.rename("scala.collection.compat.**" -> "scalacompat.@1").inAll
