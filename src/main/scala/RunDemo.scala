@@ -111,8 +111,8 @@ object RunDemo {
       at com.databricks.backend.daemon.driver.DriverWrapper.run(DriverWrapper.scala:219)
       at java.lang.Thread.run(Thread.java:748)
     */
-    val chatMessageDF = binaryDf.withColumn("parsedValue", protoParser(binaryDf("value")))
-    chatMessageDF.show(false)
+    val parsedDF = binaryDf.withColumn("parsedValue", protoParser(binaryDf("value")))
+    parsedDF.show(false)
   }
 
   val testData: Seq[Person] = Seq(
