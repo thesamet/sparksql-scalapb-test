@@ -8,9 +8,13 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{Row, functions => F}
+import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.rdd.RDD
 import scalapb.spark.Implicits._
 import scalapb.spark.ProtoSQL
+
+import java.util.UUID.randomUUID
 
 object RunDemo {
 
@@ -38,12 +42,37 @@ object RunDemo {
       .foreach(println)
     
     // Convert to Dataframe with column containing binary proto data
-    // Followed https://scalapb.github.io/docs/sparksql#udfs
-    val protosBinary = personsDS2.map(_.toByteArray)
-    val binaryDf = protosBinary.toDF("value")
-    binaryDf.printSchema
-    val protoParser = ProtoSQL.udf { bytes: Array[Byte] => Person.parseFrom(bytes) }
-    /* Above throws the following error: 
+    val protosBinary = personsDS2.map({ row: Person => 
+        // This is not good in production, caching foibles can cause row ids to mutate. 
+        // Doing this here to simulate a unique row identifier. 
+        val id: String = randomUUID().toString
+        val binaryValue = row.update(_.id := id).toByteArray
+        val other_data = "some data"
+        (id, other_data, binaryValue)
+      })
+    val binaryDF = protosBinary.toDF("id", "other_data", "value")
+    // This cache is required to prevent the `id` from mutating unexpectedly
+    binaryDF.cache
+    binaryDF.printSchema
+
+    // parse using dataset api and join back with original data:
+    val parsedDF = binaryDF
+      .select(F.col("value"))
+      .as[Array[Byte]]
+      .map(Person.parseFrom(_))
+    parsedDF.show(false)
+    binaryDF
+      .join(
+        parsedDF,
+        usingColumns=Seq("id"),
+        joinType="left"
+      )
+      .show(false)
+
+    // Parse using ProtoSQL.udf
+    // Following https://scalapb.github.io/docs/sparksql#udfs
+    /*
+    This breaks on databricks 9.1 LTS cluster image (spark 3.1.2, scala 2.12) with:
     ERROR Uncaught throwable from user code: java.lang.VerifyError: class frameless.functions.Spark2_4_LambdaVariable overrides final method genCode.(Lorg/apache/spark/sql/catalyst/expressions/codegen/CodegenContext;)Lorg/apache/spark/sql/catalyst/expressions/codegen/ExprCode;
       at java.lang.ClassLoader.defineClass1(Native Method)
       at java.lang.ClassLoader.defineClass(ClassLoader.java:757)
@@ -111,8 +140,11 @@ object RunDemo {
       at com.databricks.backend.daemon.driver.DriverWrapper.run(DriverWrapper.scala:219)
       at java.lang.Thread.run(Thread.java:748)
     */
-    val parsedDF = binaryDf.withColumn("parsedValue", protoParser(binaryDf("value")))
-    parsedDF.show(false)
+    val protoParser = ProtoSQL.udf { bytes: Array[Byte] => Person.parseFrom(bytes) }
+    val parsedDF2 = binaryDF.withColumn("parsedValue", protoParser(binaryDF("value")))
+    parsedDF2.show(false)
+    
+    binaryDF.unpersist
   }
 
   val testData: Seq[Person] = Seq(
@@ -139,3 +171,7 @@ object RunDemo {
       _.age := 11,
       _.gender := Gender.FEMALE))
 }
+
+case class Payload (
+  value: BinaryType
+)
