@@ -62,8 +62,9 @@ object RunDemo {
       .map(Person.parseFrom(_))
     parsedDF.show(false)
     binaryDF
+      .drop("value")
       .join(
-        parsedDF,
+        parsedDF.select(F.col("id"), F.struct("*").alias("parsedValue")),
         usingColumns=Seq("id"),
         joinType="left"
       )
