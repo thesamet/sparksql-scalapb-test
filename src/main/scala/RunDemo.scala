@@ -8,6 +8,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.Encoder
 import org.apache.spark.rdd.RDD
 import scalapb.spark.Implicits._
 import scalapb.spark.ProtoSQL
@@ -52,7 +53,7 @@ object RunDemo {
     val parsedDS: Dataset[ParsedEvent[Person]] = ParsedEvent.fromRawEventDSasPerson(rawEventDS)
     parsedDS.show(false)
     // this fails to compile (see ParsedEvent.fromRawEventDS)
-    val parsedDS2: Dataset[ParsedEvent[Person]] = ParsedEvent.fromRawEventDS(rawEventDS)
+    val parsedDS2: Dataset[ParsedEvent[Person]] = ParsedEvent.fromRawEventDS[Person](rawEventDS)
     parsedDS2.show(false)
   }
 
@@ -109,13 +110,11 @@ object ParsedEvent {
   }
 
   // This fails to compile 
-  // RunDemo.scala:134:11: Unable to find encoder for type myexample.ParsedEvent[A]. An implicit Encoder[myexample.ParsedEvent[A]] is needed to store myexample.ParsedEvent[A] instances in a Dataset. Primitive types (Int, String, etc) and Product types (case classes) are supported by importing spark.implicits._  Support for serializing other types will be added in future releases.
+  // RunDemo.scala:119:11: Unable to find encoder for type myexample.ParsedEvent[A]. An implicit Encoder[myexample.ParsedEvent[A]] is needed to store myexample.ParsedEvent[A] instances in a Dataset. Primitive types (Int, String, etc) and Product types (case classes) are supported by importing spark.implicits._  Support for serializing other types will be added in future releases.
   // [error]     ds.map(raw => ParsedEvent.fromRaw[A](raw))
   // [error]           ^
-  def fromRawEventDS[A <: GeneratedMessage](
+  def fromRawEventDS[A <: GeneratedMessage : GeneratedMessageCompanion : Encoder](
     ds: Dataset[RawEvent]
-  )(implicit
-      companion: GeneratedMessageCompanion[A]
   ): Dataset[ParsedEvent[A]] = {
     ds.map(raw => ParsedEvent.fromRaw[A](raw))
   }
