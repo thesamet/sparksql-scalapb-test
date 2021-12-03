@@ -8,7 +8,6 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.{Row, functions => F}
 import org.apache.spark.rdd.RDD
 import scalapb.spark.Implicits._
 import scalapb.spark.ProtoSQL
