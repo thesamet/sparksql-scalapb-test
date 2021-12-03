@@ -9,13 +9,10 @@ import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.{Row, functions => F}
-import org.apache.spark.sql.types.BinaryType
 import org.apache.spark.rdd.RDD
 import scalapb.spark.Implicits._
 import scalapb.spark.ProtoSQL
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
-
-import java.util.UUID.randomUUID
 
 object RunDemo {
 
@@ -44,17 +41,11 @@ object RunDemo {
     
     // Convert to Dataframe with column containing binary proto data
     val rawEventDS = personsDS2.map({ row: Person => 
-        // This is not good in production, caching foibles can cause row ids to mutate. 
-        // Doing this here to simulate a unique row identifier. 
-        val id: String = randomUUID().toString
         RawEvent(
-          id = id,
-          other_data = "some data",
-          value = row.update(_.id := id).toByteArray
+          metadata = "some useful wrapping metadata",
+          value = row.toByteArray
         )
       })
-    // This cache is required to prevent the `id` from mutating unexpectedly
-    rawEventDS.cache
     rawEventDS.printSchema
 
     // Use the dataset API and scalapb GenericMessage to parse the data
@@ -64,8 +55,6 @@ object RunDemo {
     // this fails to compile (see ParsedEvent.fromRawEventDS)
     val parsedDS2: Dataset[ParsedEvent[Person]] = ParsedEvent.fromRawEventDS(rawEventDS)
     parsedDS2.show(false)
-
-    rawEventDS.unpersist
   }
 
   val testData: Seq[Person] = Seq(
@@ -94,14 +83,12 @@ object RunDemo {
 }
 
 case class RawEvent (
-  id: String,
-  other_data: String,
+  metadata: String,
   value: Array[Byte]
 )
 
 case class ParsedEvent[A] (
-  id: String,
-  other_data: String,
+  metadata: String,
   value: A
 )
 object ParsedEvent {
@@ -112,8 +99,7 @@ object ParsedEvent {
       companion: GeneratedMessageCompanion[A]
   ): ParsedEvent[A] = {
     ParsedEvent(
-      id = raw.id,
-      other_data = raw.other_data,
+      metadata = raw.metadata,
       value = companion.parseFrom(raw.value)
     )
   }

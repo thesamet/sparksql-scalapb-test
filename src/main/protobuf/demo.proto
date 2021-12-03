@@ -13,10 +13,9 @@ message Address {
 }
 
 message Person {
-  optional string id = 1;
-  optional string name = 2;
-  optional int32 age = 3;
-  optional Gender gender = 4;
-  repeated string tags = 5;
-  repeated Address addresses = 6;
+  optional string name = 1;
+  optional int32 age = 2;
+  optional Gender gender = 3;
+  repeated string tags = 4;
+  repeated Address addresses = 5;
 }
